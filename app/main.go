@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/dns-server-starter-go/pkg/dns"
 	"net"
 )
 
@@ -34,10 +35,7 @@ func main() {
 		receivedData := string(buf[:size])
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
-		// Create an empty response
-		response := []byte{}
-
-		_, err = udpConn.WriteToUDP(response, source)
+		_, err = udpConn.WriteToUDP(dns.NewMessage().Serialize(), source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
