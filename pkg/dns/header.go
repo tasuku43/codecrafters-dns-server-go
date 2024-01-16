@@ -67,7 +67,7 @@ type Header struct {
 	ARCOUNT uint16
 }
 
-func (h Header) Serialize() []byte {
+func (h Header) serialize() []byte {
 	res := make([]byte, 12)
 
 	binary.BigEndian.PutUint16(res[0:], h.ID)

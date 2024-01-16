@@ -93,7 +93,7 @@ func (n Name) serialize() []byte {
 	return sequence
 }
 
-func (q Question) Serialize() []byte {
+func (q Question) serialize() []byte {
 	var serializedQuestion []byte
 
 	serializedQuestion = append(serializedQuestion, q.NAME.serialize()...)
@@ -109,7 +109,7 @@ func appendUint16ToSlice(slice []byte, value uint16) []byte {
 	return append(slice, bytes...)
 }
 
-func (q Question) Answer(ttl uint32, rdata []byte) Answer {
+func (q Question) answer(ttl uint32, rdata []byte) Answer {
 	rdLength := uint16(len(rdata))
 	return NewAnswer(q.NAME, q.TYPE, q.CLASS, ttl, rdLength, rdata)
 }

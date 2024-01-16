@@ -20,8 +20,8 @@ func (p RawMessage) Parse() Message {
 func (m *Message) Serialize() []byte {
 	var buffer bytes.Buffer
 
-	buffer.Write(m.Header.Serialize())
-	buffer.Write(m.Question.Serialize())
+	buffer.Write(m.Header.serialize())
+	buffer.Write(m.Question.serialize())
 	buffer.Write(m.Answer.serialize())
 
 	return buffer.Bytes()
@@ -31,7 +31,7 @@ func (m *Message) Respond(ttl uint32, rdata []byte) Message {
 	rm := Message{
 		Header:   m.Header,
 		Question: m.Question,
-		Answer:   m.Question.Answer(ttl, rdata),
+		Answer:   m.Question.answer(ttl, rdata),
 	}
 
 	rm.Header.Flags.QR = 1

@@ -26,7 +26,7 @@ func TestHeader_Serialize(t *testing.T) {
 		ARCOUNT: 0,
 	}
 
-	require.Equal(t, expected, header.Serialize(), "Serialized headers should match expected value")
+	require.Equal(t, expected, header.serialize(), "Serialized headers should match expected value")
 }
 
 func TestRowHeader_parse(t *testing.T) {

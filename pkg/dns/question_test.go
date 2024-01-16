@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestLabelSerialize(t *testing.T) {
+func TestLabel_Serialize(t *testing.T) {
 	var expected = []byte{
 		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
 	}
@@ -16,7 +16,7 @@ func TestLabelSerialize(t *testing.T) {
 	require.Equal(t, expected, l.serialize(), "Label serialization should match expected value")
 }
 
-func TestNameSerialize(t *testing.T) {
+func TestName_Serialize(t *testing.T) {
 	var expected = []byte{
 		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x0,
 	}
@@ -26,7 +26,7 @@ func TestNameSerialize(t *testing.T) {
 	require.Equal(t, expected, n.serialize(), "Name serialization should match expected value")
 }
 
-func TestQuestionSerialize(t *testing.T) {
+func TestQuestion_Serialize(t *testing.T) {
 	var expected = []byte{
 		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x0,
 		0x00, 0x01,
@@ -35,10 +35,10 @@ func TestQuestionSerialize(t *testing.T) {
 
 	question := NewQuestion("google.com", 1, 1)
 
-	require.Equal(t, expected, question.Serialize(), "Serialized question should match expected value")
+	require.Equal(t, expected, question.serialize(), "Serialized question should match expected value")
 }
 
-func TestRowLabelParse(t *testing.T) {
+func TestRowLabel_Parse(t *testing.T) {
 	expected := Label("google")
 
 	data := []byte{
@@ -49,7 +49,7 @@ func TestRowLabelParse(t *testing.T) {
 	require.Equal(t, expected, actual, "Parsed label should match expected value")
 }
 
-func TestRowNameParse(t *testing.T) {
+func TestRowName_Parse(t *testing.T) {
 	expected := Name{"google", "com"}
 
 	data := []byte{
@@ -61,7 +61,7 @@ func TestRowNameParse(t *testing.T) {
 	require.Equal(t, expected, actual, "Parsed name should match expected value")
 }
 
-func TestRowQuestionParse(t *testing.T) {
+func TestRowQuestion_Parse(t *testing.T) {
 	expected := Question{
 		NAME:  Name{"google", "com"},
 		TYPE:  1,
@@ -79,10 +79,10 @@ func TestRowQuestionParse(t *testing.T) {
 	require.Equal(t, expected, actual, "Parsed question should match expected value")
 }
 
-func TestQuestionAnswer(t *testing.T) {
+func TestQuestion_answer(t *testing.T) {
 	q := NewQuestion("google.com", 1, 1)
 	rdata := net.ParseIP("8.8.8.8").To4()
-	a := q.Answer(60, rdata)
+	a := q.answer(60, rdata)
 
 	expected := NewAnswer(Name{"google", "com"}, 1, 1, 60, uint16(len(rdata)), rdata)
 

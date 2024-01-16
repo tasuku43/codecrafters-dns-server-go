@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestMessageSerialize(t *testing.T) {
+func TestMessage_Serialize(t *testing.T) {
 	var expected = []byte{
 		// Header
 		0x04, 0xD2, // ID
@@ -80,7 +80,7 @@ func TestRawMessage_Parse(t *testing.T) {
 	require.Equal(t, expected, actual, "Parsed message should match expected value")
 }
 
-func TestMessageRespond(t *testing.T) {
+func TestMessage_Respond(t *testing.T) {
 	rdata := net.ParseIP("8.8.8.8").To4()
 	rdlen := uint16(len(rdata))
 	expected := Message{
