@@ -21,7 +21,7 @@ func TestMessageSerialize(t *testing.T) {
 	}
 
 	message := Message{
-		header: Header{
+		Header: Header{
 			ID: 1234,
 			Flags: HeaderFlags{
 				QR: 1,
@@ -31,7 +31,7 @@ func TestMessageSerialize(t *testing.T) {
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		question: NewQuestion("google.com", 1, 1),
+		Question: NewQuestion("google.com", 1, 1),
 	}
 
 	require.Equal(t, expected, message.Serialize(), "Serialized headers should match expected value")
@@ -39,7 +39,7 @@ func TestMessageSerialize(t *testing.T) {
 
 func TestRawMessage_Parse(t *testing.T) {
 	expected := Message{
-		header: Header{
+		Header: Header{
 			ID: 1234,
 			Flags: HeaderFlags{
 				QR: 1,
@@ -49,7 +49,7 @@ func TestRawMessage_Parse(t *testing.T) {
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		question: NewQuestion("google.com", 1, 1),
+		Question: NewQuestion("google.com", 1, 1),
 	}
 
 	data := []byte{
