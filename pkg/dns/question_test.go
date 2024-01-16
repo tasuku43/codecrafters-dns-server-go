@@ -2,6 +2,7 @@ package dns
 
 import (
 	"github.com/stretchr/testify/require"
+	"net"
 	"testing"
 )
 
@@ -76,4 +77,14 @@ func TestRowQuestionParse(t *testing.T) {
 	actual := RowQuestion(data).parse()
 
 	require.Equal(t, expected, actual, "Parsed question should match expected value")
+}
+
+func TestQuestionAnswer(t *testing.T) {
+	q := NewQuestion("google.com", 1, 1)
+	rdata := net.ParseIP("8.8.8.8").To4()
+	a := q.Answer(60, rdata)
+
+	expected := NewAnswer(Name{"google", "com"}, 1, 1, 60, uint16(len(rdata)), rdata)
+
+	require.Equal(t, expected, a, "Answer should match expected value")
 }

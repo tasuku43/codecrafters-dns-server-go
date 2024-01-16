@@ -5,14 +5,13 @@ import (
 	"strings"
 )
 
-type Label string
-
 type RowLabel []byte
 
-func parseLabel(l string) Label {
-	length := l[0]
-	return Label(l[1 : 1+length])
-}
+type RowName []byte
+
+type RowQuestion []byte
+
+type Label string
 
 func (l RowLabel) parse() Label {
 	length := l[0]
@@ -20,8 +19,6 @@ func (l RowLabel) parse() Label {
 }
 
 type Name []Label
-
-type RowName []byte
 
 func (n RowName) parse() Name {
 	var name Name
@@ -46,8 +43,6 @@ type Question struct {
 	TYPE  uint16
 	CLASS uint16
 }
-
-type RowQuestion []byte
 
 func (q RowQuestion) parse() Question {
 	length := len(q)
@@ -112,4 +107,9 @@ func appendUint16ToSlice(slice []byte, value uint16) []byte {
 	bytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(bytes, value)
 	return append(slice, bytes...)
+}
+
+func (q Question) Answer(ttl uint32, rdata []byte) Answer {
+	rdLength := uint16(len(rdata))
+	return NewAnswer(q.NAME, q.TYPE, q.CLASS, ttl, rdLength, rdata)
 }

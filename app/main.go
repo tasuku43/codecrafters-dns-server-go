@@ -36,12 +36,15 @@ func main() {
 
 		// TODO - Implement DNS server logic here.
 
-		m.Header.Flags.QR = 1
-		m.Header.QDCOUNT = 1
-		m.Question.TYPE = 1
-		m.Question.CLASS = 1
+		ipv4 := net.ParseIP("8.8.8.8").To4()
+		if ipv4 == nil {
+			fmt.Println("Invalid IPv4 address")
+			return
+		}
 
-		_, err = udpConn.WriteToUDP(m.Serialize(), source)
+		rm := m.Respond(60, ipv4)
+
+		_, err = udpConn.WriteToUDP(rm.Serialize(), source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
