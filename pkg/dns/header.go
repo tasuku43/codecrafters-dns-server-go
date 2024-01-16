@@ -2,6 +2,36 @@ package dns
 
 import "encoding/binary"
 
+type RowHeader []byte
+
+type RowHeaderFlags []byte
+
+func (h RowHeaderFlags) parse() HeaderFlags {
+	flags := binary.BigEndian.Uint16(h)
+
+	return HeaderFlags{
+		QR:     flags >> 15,
+		OPCODE: (flags >> 11) & 0x0F,
+		AA:     (flags >> 10) & 0x01,
+		TC:     (flags >> 9) & 0x01,
+		RD:     (flags >> 8) & 0x01,
+		RA:     (flags >> 7) & 0x01,
+		Z:      (flags >> 4) & 0x07,
+		RCODE:  flags & 0x0F,
+	}
+}
+
+func (h RowHeader) parse() Header {
+	return Header{
+		ID:      binary.BigEndian.Uint16(h[0:2]),
+		Flags:   RowHeaderFlags(h[2:4]).parse(),
+		QDCOUNT: binary.BigEndian.Uint16(h[4:6]),
+		ANCOUNT: binary.BigEndian.Uint16(h[6:8]),
+		NSCOUNT: binary.BigEndian.Uint16(h[8:10]),
+		ARCOUNT: binary.BigEndian.Uint16(h[10:12]),
+	}
+}
+
 type HeaderFlags struct {
 	QR     uint16
 	OPCODE uint16

@@ -32,10 +32,16 @@ func main() {
 			break
 		}
 
-		receivedData := string(buf[:size])
-		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
+		m := dns.RawMessage(buf[:size]).Parse()
 
-		_, err = udpConn.WriteToUDP(dns.NewMessage().Serialize(), source)
+		// TODO - Implement DNS server logic here.
+
+		m.Header.Flags.QR = 1
+		m.Header.QDCOUNT = 1
+		m.Question.TYPE = 1
+		m.Question.CLASS = 1
+
+		_, err = udpConn.WriteToUDP(m.Serialize(), source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}

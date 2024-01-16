@@ -37,20 +37,43 @@ func TestQuestionSerialize(t *testing.T) {
 	require.Equal(t, expected, question.Serialize(), "Serialized question should match expected value")
 }
 
-func TestQuestionsSerialize(t *testing.T) {
-	var expected = []byte{
-		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x0,
-		0x00, 0x01,
-		0x00, 0x01,
-		0x04, 0x62, 0x69, 0x6e, 0x67, 0x03, 0x63, 0x6f, 0x6d, 0x0,
+func TestRowLabelParse(t *testing.T) {
+	expected := Label("google")
+
+	data := []byte{
+		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+	}
+	actual := RowLabel(data).parse()
+
+	require.Equal(t, expected, actual, "Parsed label should match expected value")
+}
+
+func TestRowNameParse(t *testing.T) {
+	expected := Name{"google", "com"}
+
+	data := []byte{
+		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+		0x03, 0x63, 0x6f, 0x6d, 0x0,
+	}
+	actual := RowName(data).parse()
+
+	require.Equal(t, expected, actual, "Parsed name should match expected value")
+}
+
+func TestRowQuestionParse(t *testing.T) {
+	expected := Question{
+		NAME:  Name{"google", "com"},
+		TYPE:  1,
+		CLASS: 1,
+	}
+
+	data := []byte{
+		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+		0x03, 0x63, 0x6f, 0x6d, 0x0,
 		0x00, 0x01,
 		0x00, 0x01,
 	}
+	actual := RowQuestion(data).parse()
 
-	questions := Questions{
-		NewQuestion("google.com", 1, 1),
-		NewQuestion("bing.com", 1, 1),
-	}
-
-	require.Equal(t, expected, questions.Serialize(), "Serialized questions should match expected value")
+	require.Equal(t, expected, actual, "Parsed question should match expected value")
 }

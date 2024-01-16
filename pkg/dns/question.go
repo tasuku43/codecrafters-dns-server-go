@@ -7,7 +7,39 @@ import (
 
 type Label string
 
+type RowLabel []byte
+
+func parseLabel(l string) Label {
+	length := l[0]
+	return Label(l[1 : 1+length])
+}
+
+func (l RowLabel) parse() Label {
+	length := l[0]
+	return Label(l[1 : 1+length])
+}
+
 type Name []Label
+
+type RowName []byte
+
+func (n RowName) parse() Name {
+	var name Name
+	offset := 0
+
+	for offset < len(n) {
+		length := int(n[offset])
+		if length == 0 {
+			break
+		}
+		offset++
+		label := Label(n[offset : offset+length])
+		name = append(name, label)
+		offset += length
+	}
+
+	return name
+}
 
 type Question struct {
 	NAME  Name
@@ -15,7 +47,19 @@ type Question struct {
 	CLASS uint16
 }
 
-type Questions []Question
+type RowQuestion []byte
+
+func (q RowQuestion) parse() Question {
+	length := len(q)
+	qType := binary.BigEndian.Uint16(q[length-4 : length-2])
+	qClass := binary.BigEndian.Uint16(q[length-2 : length])
+
+	return Question{
+		NAME:  RowName(q[0 : length-4]).parse(),
+		TYPE:  qType,
+		CLASS: qClass,
+	}
+}
 
 func (l Label) serialize() []byte {
 	length := uint8(len(l))
@@ -40,16 +84,6 @@ func NewQuestion(n string, t uint16, c uint16) Question {
 		TYPE:  t,
 		CLASS: c,
 	}
-}
-
-func (q Questions) Serialize() []byte {
-	var serializedQuestions []byte
-
-	for _, question := range q {
-		serializedQuestions = append(serializedQuestions, question.Serialize()...)
-	}
-
-	return serializedQuestions
 }
 
 func (n Name) serialize() []byte {
