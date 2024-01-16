@@ -87,7 +87,8 @@ func TestMessage_Respond(t *testing.T) {
 		Header: Header{
 			ID: 1234,
 			Flags: HeaderFlags{
-				QR: 1,
+				QR:    1,
+				RCODE: 4,
 			},
 			QDCOUNT: 1,
 			ANCOUNT: 1,
