@@ -3,35 +3,39 @@ package dns
 import "bytes"
 
 type Message struct {
-	Header   Header
-	Question Question
-	Answer   Answer
+	Header    Header
+	Questions Questions
+	Answers   Answers
 }
 
 type RawMessage []byte
 
-func (p RawMessage) Parse() Message {
-	return Message{
-		Header:   RowHeader(p[0:12]).parse(),
-		Question: RowQuestion(p[12:]).parse(),
+func (p RawMessage) Parse() (Message, error) {
+	qs, err := RowQuestions(p[12:]).parse()
+	if err != nil {
+		return Message{}, err
 	}
+	return Message{
+		Header:    RowHeader(p[0:12]).parse(),
+		Questions: qs,
+	}, nil
 }
 
 func (m *Message) Serialize() []byte {
 	var buffer bytes.Buffer
 
 	buffer.Write(m.Header.serialize())
-	buffer.Write(m.Question.serialize())
-	buffer.Write(m.Answer.serialize())
+	buffer.Write(m.Questions.serialize())
+	buffer.Write(m.Answers.serialize())
 
 	return buffer.Bytes()
 }
 
 func (m *Message) Respond(ttl uint32, rdata []byte) Message {
 	rm := Message{
-		Header:   m.Header,
-		Question: m.Question,
-		Answer:   m.Question.answer(ttl, rdata),
+		Header:    m.Header,
+		Questions: m.Questions,
+		Answers:   m.Questions.answer(ttl, rdata),
 	}
 
 	rm.Header.Flags.QR = 1

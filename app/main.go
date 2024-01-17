@@ -32,7 +32,11 @@ func main() {
 			break
 		}
 
-		m := dns.RawMessage(buf[:size]).Parse()
+		m, err := dns.RawMessage(buf[:size]).Parse()
+		if err != nil {
+			fmt.Println("Error parsing message:", err)
+			break
+		}
 
 		// TODO - Implement DNS server logic here.
 

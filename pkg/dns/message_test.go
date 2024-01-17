@@ -40,8 +40,12 @@ func TestMessage_Serialize(t *testing.T) {
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		Question: NewQuestion("google.com", 1, 1),
-		Answer:   NewAnswer(Name{"google", "com"}, 1, 1, 1, uint16(len(rdata)), rdata),
+		Questions: Questions{
+			NewQuestion("google.com", 1, 1),
+		},
+		Answers: Answers{
+			NewAnswer(Name{"google", "com"}, 1, 1, 1, uint16(len(rdata)), rdata),
+		},
 	}
 
 	require.Equal(t, expected, message.Serialize(), "Serialized headers should match expected value")
@@ -59,7 +63,7 @@ func TestRawMessage_Parse(t *testing.T) {
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		Question: NewQuestion("google.com", 1, 1),
+		Questions: Questions{NewQuestion("google.com", 1, 1)},
 	}
 
 	data := []byte{
@@ -75,7 +79,7 @@ func TestRawMessage_Parse(t *testing.T) {
 		0x00, 0x01,
 		0x00, 0x01,
 	}
-	actual := RawMessage(data).Parse()
+	actual, _ := RawMessage(data).Parse()
 
 	require.Equal(t, expected, actual, "Parsed message should match expected value")
 }
@@ -95,8 +99,8 @@ func TestMessage_Respond(t *testing.T) {
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		Question: NewQuestion("google.com", 1, 1),
-		Answer:   NewAnswer(Name{"google", "com"}, 1, 1, 1, rdlen, rdata),
+		Questions: Questions{NewQuestion("google.com", 1, 1)},
+		Answers:   Answers{NewAnswer(Name{"google", "com"}, 1, 1, 1, rdlen, rdata)},
 	}
 
 	message := Message{
@@ -110,7 +114,7 @@ func TestMessage_Respond(t *testing.T) {
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		Question: NewQuestion("google.com", 1, 1),
+		Questions: Questions{NewQuestion("google.com", 1, 1)},
 	}
 
 	require.Equal(t, expected, message.Respond(1, rdata), "Responded message should match expected value")

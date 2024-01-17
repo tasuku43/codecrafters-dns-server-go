@@ -14,6 +14,8 @@ type Answer struct {
 	RDATA   []byte
 }
 
+type Answers []Answer
+
 func (a Answer) serialize() []byte {
 	var buffer bytes.Buffer
 
@@ -27,6 +29,16 @@ func (a Answer) serialize() []byte {
 	buffer.Write(a.RDATA)
 
 	return buffer.Bytes()
+}
+
+func (as Answers) serialize() []byte {
+	var serializedAnswers []byte
+
+	for _, answer := range as {
+		serializedAnswers = append(serializedAnswers, answer.serialize()...)
+	}
+
+	return serializedAnswers
 }
 
 func NewAnswer(name Name, qType uint16, qClass uint16, ttl uint32, rdlength uint16, rdata []byte) Answer {

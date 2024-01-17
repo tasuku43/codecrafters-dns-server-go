@@ -2,6 +2,7 @@ package dns
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strings"
 )
 
@@ -11,14 +12,44 @@ type RowName []byte
 
 type RowQuestion []byte
 
+type RowQuestions []byte
+
 type Label string
+
+type Name []Label
+
+type Question struct {
+	NAME  Name
+	TYPE  uint16
+	CLASS uint16
+}
+
+type Questions []Question
+
+func (qs Questions) serialize() []byte {
+	var serializedQuestions []byte
+
+	for _, question := range qs {
+		serializedQuestions = append(serializedQuestions, question.serialize()...)
+	}
+
+	return serializedQuestions
+}
+
+func (qs Questions) answer(ttl uint32, rdata []byte) Answers {
+	var answers Answers
+
+	for _, question := range qs {
+		answers = append(answers, question.answer(ttl, rdata))
+	}
+
+	return answers
+}
 
 func (l RowLabel) parse() Label {
 	length := l[0]
 	return Label(l[1 : 1+length])
 }
-
-type Name []Label
 
 func (n RowName) parse() Name {
 	var name Name
@@ -38,12 +69,6 @@ func (n RowName) parse() Name {
 	return name
 }
 
-type Question struct {
-	NAME  Name
-	TYPE  uint16
-	CLASS uint16
-}
-
 func (q RowQuestion) parse() Question {
 	length := len(q)
 	qType := binary.BigEndian.Uint16(q[length-4 : length-2])
@@ -54,6 +79,41 @@ func (q RowQuestion) parse() Question {
 		TYPE:  qType,
 		CLASS: qClass,
 	}
+}
+
+func (qs RowQuestions) parse() (Questions, error) {
+	var questions Questions
+	offset := 0
+
+	for offset < len(qs) {
+		endOfName, err := findNullOffset(qs[offset:])
+
+		if err != nil {
+			return nil, err
+		}
+
+		endOfQuestion := offset + endOfName + 5
+
+		if endOfQuestion > len(qs) {
+			return nil, fmt.Errorf("invalid question length")
+		}
+
+		questions = append(questions, RowQuestion(qs[offset:endOfQuestion]).parse())
+
+		offset = endOfQuestion
+	}
+
+	return questions, nil
+}
+
+func findNullOffset(slice []byte) (int, error) {
+	for i, b := range slice {
+		if b == 0 {
+			return i, nil
+		}
+	}
+
+	return 0, fmt.Errorf("null terminator not found")
 }
 
 func (l Label) serialize() []byte {
