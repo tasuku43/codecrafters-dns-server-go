@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"os"
@@ -22,29 +22,50 @@ func main() {
 	}
 	defer conn.Close()
 
-	reader := bufio.NewReader(os.Stdin)
+	dnsRequest := createDNSRequest([]string{"abc.example.com", "def.example.com"})
 
-	for {
-		fmt.Print("Enter message: ")
-		message, _ := reader.ReadString('\n')
-		message = strings.TrimSpace(message)
-
-		if message == "exit" {
-			break
-		}
-
-		_, err = conn.Write([]byte(message))
-		if err != nil {
-			fmt.Println("Failed to send message:", err)
-			continue
-		}
-
-		buf := make([]byte, 512)
-		n, _, err := conn.ReadFromUDP(buf)
-		if err != nil {
-			fmt.Println("Failed to read from server:", err)
-			continue
-		}
-		fmt.Printf("Server reply: %s\n", string(buf[:n]))
+	_, err = conn.Write(dnsRequest)
+	if err != nil {
+		fmt.Println("Failed to send message:", err)
+		return
 	}
+
+	buf := make([]byte, 512)
+	n, _, err := conn.ReadFromUDP(buf)
+	if err != nil {
+		fmt.Println("Failed to read from server:", err)
+		return
+	}
+	fmt.Printf("Server reply: %s\n", string(buf[:n]))
+}
+
+func createDNSRequest(domains []string) []byte {
+	var header [12]byte
+	binary.BigEndian.PutUint16(header[0:2], 1234)                 // ID
+	binary.BigEndian.PutUint16(header[4:6], uint16(len(domains))) // QDCOUNT
+
+	question := make([]byte, 0)
+	for _, domain := range domains {
+		question = append(question, createQuestion(domain, 1, 1)...)
+	}
+
+	return append(header[:], question...)
+}
+
+func createQuestion(domain string, qtype, qclass uint16) []byte {
+	question := make([]byte, 0)
+	for _, part := range strings.Split(domain, ".") {
+		question = append(question, byte(len(part)))
+		question = append(question, part...)
+	}
+	question = append(question, 0)
+	question = appendUint16ToSlice(question, qtype)
+	question = appendUint16ToSlice(question, qclass)
+	return question
+}
+
+func appendUint16ToSlice(slice []byte, value uint16) []byte {
+	bytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(bytes, value)
+	return append(slice, bytes...)
 }
