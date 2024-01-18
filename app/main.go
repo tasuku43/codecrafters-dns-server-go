@@ -7,9 +7,6 @@ import (
 )
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
-
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
 	if err != nil {
 		fmt.Println("Failed to resolve UDP address:", err)
@@ -32,11 +29,14 @@ func main() {
 			break
 		}
 
+		fmt.Println(buf[:size])
+
 		m, err := dns.RawMessage(buf[:size]).Parse()
 		if err != nil {
 			fmt.Println("Error parsing message:", err)
 			break
 		}
+		fmt.Printf("Start processing. ID %d\n", m.Header.ID)
 
 		// TODO - Implement DNS server logic here.
 
@@ -52,5 +52,7 @@ func main() {
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
+
+		fmt.Println("Response sent. ID", rm.Header.ID)
 	}
 }
