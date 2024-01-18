@@ -86,34 +86,38 @@ func (qs RowQuestions) parse() (Questions, error) {
 	offset := 0
 
 	for offset < len(qs) {
-		endOfName, err := findNullOffset(qs[offset:])
+		labelOffset, _ := findLabelPointerOffset(qs[offset:])
+		if labelOffset.labelEndOffset > 0 {
+			endOfName := labelOffset.labelEndOffset
+			endOfQuestion := offset + endOfName + 5
 
-		if err != nil {
-			return nil, err
+			if endOfQuestion > len(qs) {
+				return nil, fmt.Errorf("invalid question length")
+			}
+
+			questions = append(questions, RowQuestion(qs[offset:endOfQuestion]).parse())
+
+			offset = endOfQuestion
 		}
-
-		endOfQuestion := offset + endOfName + 5
-
-		if endOfQuestion > len(qs) {
-			return nil, fmt.Errorf("invalid question length")
-		}
-
-		questions = append(questions, RowQuestion(qs[offset:endOfQuestion]).parse())
-
-		offset = endOfQuestion
 	}
 
 	return questions, nil
 }
 
-func findNullOffset(slice []byte) (int, error) {
-	for i, b := range slice {
+type LabelOffset struct {
+	labelEndOffset           int
+	compressionPointerOffset int
+}
+
+func findLabelPointerOffset(slice []byte) (LabelOffset, error) {
+	offset := 0
+	for offset < len(slice) {
+		b := slice[offset]
 		if b == 0 {
-			return i, nil
+			return LabelOffset{labelEndOffset: offset}, nil
 		}
 	}
-
-	return 0, fmt.Errorf("null terminator not found")
+	return LabelOffset{}, fmt.Errorf("null terminator not found")
 }
 
 func (l Label) serialize() []byte {
