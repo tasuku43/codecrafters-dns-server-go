@@ -40,8 +40,8 @@ func (m *Message) Respond(ttl uint32, rdata []byte) Message {
 
 	rm.Header.Flags.QR = 1
 	rm.Header.Flags.RCODE = 4
-	rm.Header.QDCOUNT = 1
-	rm.Header.ANCOUNT = 1
+	rm.Header.QDCOUNT = rm.Questions.Count()
+	rm.Header.ANCOUNT = rm.Answers.Count()
 	rm.Header.NSCOUNT = 0
 	rm.Header.ARCOUNT = 0
 

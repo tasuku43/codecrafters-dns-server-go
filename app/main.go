@@ -50,7 +50,8 @@ func main() {
 
 		rm := m.Respond(60, ipv4)
 
-		fmt.Println("Parsed Respond Message: ", rm)
+		fmt.Println("Respond Message: ", rm)
+		fmt.Println("Respond Row Message: ", rm.Serialize())
 
 		_, err = udpConn.WriteToUDP(rm.Serialize(), source)
 		if err != nil {

@@ -41,6 +41,10 @@ func (as Answers) serialize() []byte {
 	return serializedAnswers
 }
 
+func (as Answers) Count() uint16 {
+	return uint16(len(as))
+}
+
 func NewAnswer(name Name, qType uint16, qClass uint16, ttl uint32, rdlength uint16, rdata []byte) Answer {
 	return Answer{
 		NAME:    name,

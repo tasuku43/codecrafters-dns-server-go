@@ -46,6 +46,10 @@ func (qs Questions) answer(ttl uint32, rdata []byte) Answers {
 	return answers
 }
 
+func (qs Questions) Count() uint16 {
+	return uint16(len(qs))
+}
+
 func (l RowLabel) parse() Label {
 	length := l[0]
 	return Label(l[1 : 1+length])
