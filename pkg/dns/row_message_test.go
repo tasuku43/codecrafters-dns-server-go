@@ -2,40 +2,33 @@ package dns
 
 import (
 	"github.com/stretchr/testify/require"
-	"net"
 	"testing"
 )
 
-func TestLabel_Serialize(t *testing.T) {
-	var expected = []byte{
-		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+func TestRowHeader_parse(t *testing.T) {
+	expected := Header{
+		ID: 1234,
+		Flags: HeaderFlags{
+			QR: 1,
+		},
+		QDCOUNT: 1,
+		ANCOUNT: 1,
+		NSCOUNT: 0,
+		ARCOUNT: 0,
 	}
 
-	var l Label = "google"
-
-	require.Equal(t, expected, l.serialize(), "Label serialization should match expected value")
-}
-
-func TestName_Serialize(t *testing.T) {
-	var expected = []byte{
-		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x0,
+	data := []byte{
+		// Header
+		0x04, 0xD2, // ID
+		0x80, 0x00, // Flags
+		0x00, 0x01, // QDCOUNT
+		0x00, 0x01, // ANCOUNT
+		0x00, 0x00, // NSCOUNT
+		0x00, 0x00, // ARCOUNT
 	}
+	actual := RowHeader(data).parse()
 
-	var n Name = []Label{"google", "com"}
-
-	require.Equal(t, expected, n.serialize(), "Name serialization should match expected value")
-}
-
-func TestQuestion_Serialize(t *testing.T) {
-	var expected = []byte{
-		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x0,
-		0x00, 0x01,
-		0x00, 0x01,
-	}
-
-	question := NewQuestion("google.com", 1, 1)
-
-	require.Equal(t, expected, question.serialize(), "Serialized question should match expected value")
+	require.Equal(t, expected, actual, "Parsed header should match expected value")
 }
 
 func TestRowLabel_Parse(t *testing.T) {
@@ -115,12 +108,35 @@ func TestRowQuestions_Parse(t *testing.T) {
 	require.Equal(t, expected, actual, "Parsed questions should match expected value")
 }
 
-func TestQuestion_answer(t *testing.T) {
-	q := NewQuestion("google.com", 1, 1)
-	rdata := net.ParseIP("8.8.8.8").To4()
-	a := q.answer(60, rdata)
+func TestRawMessage_Parse(t *testing.T) {
+	expected := Message{
+		Header: Header{
+			ID: 1234,
+			Flags: HeaderFlags{
+				QR: 1,
+			},
+			QDCOUNT: 1,
+			ANCOUNT: 1,
+			NSCOUNT: 0,
+			ARCOUNT: 0,
+		},
+		Questions: Questions{NewQuestion("google.com", 1, 1)},
+	}
 
-	expected := NewAnswer(Name{"google", "com"}, 1, 1, 60, uint16(len(rdata)), rdata)
+	data := []byte{
+		// Header
+		0x04, 0xD2, // ID
+		0x80, 0x00, // Flags
+		0x00, 0x01, // QDCOUNT
+		0x00, 0x01, // ANCOUNT
+		0x00, 0x00, // NSCOUNT
+		0x00, 0x00, // ARCOUNT
+		// Question
+		0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x0,
+		0x00, 0x01,
+		0x00, 0x01,
+	}
+	actual, _ := RawMessage(data).Parse()
 
-	require.Equal(t, expected, a, "Answer should match expected value")
+	require.Equal(t, expected, actual, "Parsed message should match expected value")
 }
