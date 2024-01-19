@@ -86,7 +86,7 @@ func (qs RowQuestions) parse() (Questions, error) {
 	offset := 0
 
 	for offset < len(qs) {
-		labelOffset, _ := findLabelPointerOffset(qs[offset:])
+		labelOffset, err := findLabelPointerOffset(offset, qs[offset:])
 		if labelOffset.labelEndOffset > 0 {
 			endOfName := labelOffset.labelEndOffset
 			endOfQuestion := offset + endOfName + 5
@@ -98,26 +98,67 @@ func (qs RowQuestions) parse() (Questions, error) {
 			questions = append(questions, RowQuestion(qs[offset:endOfQuestion]).parse())
 
 			offset = endOfQuestion
+
+			continue
 		}
+		if labelOffset.compressionPointerOffset > 0 {
+			pointerOffset := labelOffset.compressionPointerOffset - 12
+			endOfName, _ := findNullOffset(qs[pointerOffset:])
+
+			var name RowName
+			name = append(name, qs[offset:labelOffset.value-1]...)
+			name = append(name, qs[pointerOffset:pointerOffset+endOfName+1]...)
+
+			endOfQuestion := labelOffset.value + 5
+
+			var rq RowQuestion
+			rq = append(rq, name...)
+			rq = append(rq, qs[labelOffset.value+1:endOfQuestion]...)
+			questions = append(questions, rq.parse())
+
+			offset = endOfQuestion
+
+			continue
+		}
+		return Questions{}, err
 	}
 
 	return questions, nil
 }
 
 type LabelOffset struct {
+	value                    int
 	labelEndOffset           int
 	compressionPointerOffset int
 }
 
-func findLabelPointerOffset(slice []byte) (LabelOffset, error) {
+func findLabelPointerOffset(context int, slice []byte) (LabelOffset, error) {
 	offset := 0
 	for offset < len(slice) {
 		b := slice[offset]
 		if b == 0 {
-			return LabelOffset{labelEndOffset: offset}, nil
+			return LabelOffset{value: context + offset + 1, labelEndOffset: offset}, nil
+		}
+		if b&0xC0 == 0xC0 {
+			if offset+1 >= len(slice) {
+				return LabelOffset{}, fmt.Errorf("invalid pointer in label")
+			}
+			return LabelOffset{value: context + offset + 1, compressionPointerOffset: int(b&0x3F)<<8 + int(slice[offset+1])}, nil
+		} else {
+			offset++
 		}
 	}
 	return LabelOffset{}, fmt.Errorf("null terminator not found")
+}
+
+func findNullOffset(slice []byte) (int, error) {
+	for i, b := range slice {
+		if b == 0 {
+			return i, nil
+		}
+	}
+
+	return 0, fmt.Errorf("null terminator not found")
 }
 
 func (l Label) serialize() []byte {

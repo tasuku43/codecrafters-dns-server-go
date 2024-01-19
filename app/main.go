@@ -29,7 +29,7 @@ func main() {
 			break
 		}
 
-		fmt.Println(buf[:size])
+		fmt.Println("DNS Message: ", buf[:size])
 
 		m, err := dns.RawMessage(buf[:size]).Parse()
 		if err != nil {
@@ -46,7 +46,11 @@ func main() {
 			return
 		}
 
+		fmt.Println("Parsed Message: ", m)
+
 		rm := m.Respond(60, ipv4)
+
+		fmt.Println("Parsed Respond Message: ", rm)
 
 		_, err = udpConn.WriteToUDP(rm.Serialize(), source)
 		if err != nil {
