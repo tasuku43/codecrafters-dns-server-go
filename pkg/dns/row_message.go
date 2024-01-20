@@ -84,7 +84,7 @@ func (p RawMessage) Parse() (Message, error) {
 	var questions Questions
 	offset := 12
 
-	for offset < len(p) {
+	for i := 0; i < int(header.QDCOUNT); i++ {
 		labelOffset, err := findLabelPointerOffset(offset, p[offset:])
 		if labelOffset.labelEndOffset > 0 {
 			endOfName := labelOffset.labelEndOffset
