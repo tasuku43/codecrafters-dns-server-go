@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/codecrafters-io/dns-server-starter-go/pkg/dns"
 	"net"
@@ -20,6 +21,22 @@ func main() {
 	}
 	defer udpConn.Close()
 
+	resolverAddress := flag.String("resolver", "", "DNS resolver address.")
+	flag.Parse()
+
+	if *resolverAddress == "" {
+		fmt.Println("Error: Resolver address is required.")
+		return
+	}
+
+	forwarder, err := dns.NewForwarder(*resolverAddress)
+	if err != nil {
+		fmt.Println("Failed to create forwarder:", err)
+		return
+	}
+
+	fmt.Printf("Using DNS resolver at address: %s\n", *resolverAddress)
+
 	buf := make([]byte, 512)
 
 	for {
@@ -29,35 +46,42 @@ func main() {
 			break
 		}
 
-		fmt.Println("DNS Message: ", buf[:size])
-
 		m, err := dns.RawMessage(buf[:size]).Parse()
 		if err != nil {
 			fmt.Println("Error parsing message:", err)
 			break
 		}
+		fmt.Println("[", m.Header.ID, "]DNS Message: ", buf[:size])
+		ms := m.Split()
 		fmt.Printf("Start processing. ID %d\n", m.Header.ID)
 
-		// TODO - Implement DNS server logic here.
-
-		ipv4 := net.ParseIP("8.8.8.8").To4()
-		if ipv4 == nil {
-			fmt.Println("Invalid IPv4 address")
-			return
+		var resMessages dns.Messages
+		for _, m := range ms {
+			rm, err := forwarder.Forward(m.Serialize())
+			if err != nil {
+				fmt.Println("Error forwarding message:", err)
+				break
+			}
+			parsedResMessage, err := rm.Parse()
+			if err != nil {
+				fmt.Println("Error parsing message:", err)
+				break
+			}
+			fmt.Printf("[%d]parsedResMessageHeader: %+v\n", m.Header.ID, parsedResMessage.Header)
+			fmt.Printf("[%d]parsedResMessageQuestions: %+v\n", m.Header.ID, parsedResMessage.Questions)
+			fmt.Printf("[%d]parsedResMessageAnswers: %+v\n", m.Header.ID, parsedResMessage.Answers)
+			resMessages = append(resMessages, parsedResMessage)
 		}
+		fmt.Printf("[%d]ResMessages: %+v\n", m.Header.ID, resMessages)
 
-		fmt.Println("Parsed Message: ", m)
+		mergedMessage := resMessages.Merge()
+		fmt.Printf("[%d]ResMergedMessages: %+v\n", m.Header.ID, mergedMessage)
 
-		rm := m.Respond(60, ipv4)
-
-		fmt.Println("Respond Message: ", rm)
-		fmt.Println("Respond Row Message: ", rm.Serialize())
-
-		_, err = udpConn.WriteToUDP(rm.Serialize(), source)
+		_, err = udpConn.WriteToUDP(mergedMessage.Serialize(), source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
 
-		fmt.Println("Response sent. ID", rm.Header.ID)
+		fmt.Println("Response sent. ID", m.Header.ID)
 	}
 }

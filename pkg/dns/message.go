@@ -3,7 +3,6 @@ package dns
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"strings"
 )
 
@@ -61,6 +60,8 @@ type Message struct {
 	Questions Questions
 	Answers   Answers
 }
+
+type Messages []Message
 
 func (f *HeaderFlags) toInt16() uint16 {
 	var flags uint16 = 0
@@ -186,6 +187,27 @@ func (m *Message) Serialize() []byte {
 	return buffer.Bytes()
 }
 
+func (m *Message) Split() Messages {
+	var messages Messages
+
+	for _, question := range m.Questions {
+		messages = append(messages, Message{
+			Header: Header{
+				ID:      m.Header.ID,
+				Flags:   m.Header.Flags,
+				QDCOUNT: 1,
+				ANCOUNT: 0,
+				NSCOUNT: 0,
+				ARCOUNT: 0,
+			},
+			Questions: Questions{question},
+			Answers:   Answers{},
+		})
+	}
+
+	return messages
+}
+
 func (m *Message) Respond(ttl uint32, rdata []byte) Message {
 	rm := Message{
 		Header:    m.Header,
@@ -203,6 +225,27 @@ func (m *Message) Respond(ttl uint32, rdata []byte) Message {
 	return rm
 }
 
+func (ms Messages) Merge() Message {
+	qs := Questions{}
+	for _, m := range ms {
+		qs = append(qs, m.Questions...)
+	}
+	as := Answers{}
+	for _, m := range ms {
+		as = append(as, m.Answers...)
+	}
+	return Message{
+		Header: Header{
+			ID:      ms[0].Header.ID,
+			Flags:   ms[0].Header.Flags,
+			QDCOUNT: uint16(len(qs)),
+			ANCOUNT: uint16(len(as)),
+		},
+		Questions: qs,
+		Answers:   as,
+	}
+}
+
 func NewAnswer(name Name, qType uint16, qClass uint16, ttl uint32, rdlength uint16, rdata []byte) Answer {
 	return Answer{
 		NAME:    name,
@@ -212,35 +255,6 @@ func NewAnswer(name Name, qType uint16, qClass uint16, ttl uint32, rdlength uint
 		RDLENGH: rdlength,
 		RDATA:   rdata,
 	}
-}
-
-func findLabelPointerOffset(context int, slice []byte) (LabelOffset, error) {
-	offset := 0
-	for offset < len(slice) {
-		b := slice[offset]
-		if b == 0 {
-			return LabelOffset{value: context + offset + 1, labelEndOffset: offset}, nil
-		}
-		if b&0xC0 == 0xC0 {
-			if offset+1 >= len(slice) {
-				return LabelOffset{}, fmt.Errorf("invalid pointer in label")
-			}
-			return LabelOffset{value: context + offset + 1, compressionPointerOffset: int(b&0x3F)<<8 + int(slice[offset+1])}, nil
-		} else {
-			offset++
-		}
-	}
-	return LabelOffset{}, fmt.Errorf("null terminator not found")
-}
-
-func findNullOffset(slice []byte) (int, error) {
-	for i, b := range slice {
-		if b == 0 {
-			return i, nil
-		}
-	}
-
-	return 0, fmt.Errorf("null terminator not found")
 }
 
 func parseDomainName(n string) Name {

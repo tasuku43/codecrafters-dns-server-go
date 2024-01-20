@@ -152,3 +152,102 @@ func TestMessage_Respond(t *testing.T) {
 
 	require.Equal(t, expected, message.Respond(1, rdata), "Responded message should match expected value")
 }
+
+func TestMessage_Split(t *testing.T) {
+	expected := Messages{
+		Message{
+			Header: Header{
+				ID: 1234,
+				Flags: HeaderFlags{
+					QR: 1,
+				},
+				QDCOUNT: 1,
+				ANCOUNT: 0,
+				NSCOUNT: 0,
+				ARCOUNT: 0,
+			},
+			Questions: Questions{NewQuestion("google.com", 1, 1)},
+			Answers:   Answers{},
+		},
+		Message{
+			Header: Header{
+				ID: 1234,
+				Flags: HeaderFlags{
+					QR: 1,
+				},
+				QDCOUNT: 1,
+				ANCOUNT: 0,
+				NSCOUNT: 0,
+				ARCOUNT: 0,
+			},
+			Questions: Questions{NewQuestion("google.com", 1, 1)},
+			Answers:   Answers{},
+		},
+	}
+
+	message := Message{
+		Header: Header{
+			ID: 1234,
+			Flags: HeaderFlags{
+				QR: 1,
+			},
+			QDCOUNT: 2,
+			ANCOUNT: 0,
+			NSCOUNT: 0,
+			ARCOUNT: 0,
+		},
+		Questions: Questions{NewQuestion("google.com", 1, 1), NewQuestion("google.com", 1, 1)},
+	}
+
+	require.Equal(t, expected, message.Split(), "Split messages should match expected value")
+}
+
+func TestMessages_Merge(t *testing.T) {
+	expected := Message{
+		Header: Header{
+			ID: 1234,
+			Flags: HeaderFlags{
+				QR: 1,
+			},
+			QDCOUNT: 2,
+			ANCOUNT: 0,
+			NSCOUNT: 0,
+			ARCOUNT: 0,
+		},
+		Questions: Questions{NewQuestion("google.com", 1, 1), NewQuestion("google.com", 1, 1)},
+		Answers:   Answers{},
+	}
+
+	messages := Messages{
+		Message{
+			Header: Header{
+				ID: 1234,
+				Flags: HeaderFlags{
+					QR: 1,
+				},
+				QDCOUNT: 1,
+				ANCOUNT: 0,
+				NSCOUNT: 0,
+				ARCOUNT: 0,
+			},
+			Questions: Questions{NewQuestion("google.com", 1, 1)},
+			Answers:   Answers{},
+		},
+		Message{
+			Header: Header{
+				ID: 1234,
+				Flags: HeaderFlags{
+					QR: 1,
+				},
+				QDCOUNT: 1,
+				ANCOUNT: 0,
+				NSCOUNT: 0,
+				ARCOUNT: 0,
+			},
+			Questions: Questions{NewQuestion("google.com", 1, 1)},
+			Answers:   Answers{},
+		},
+	}
+
+	require.Equal(t, expected, messages.Merge(), "Merged message should match expected value")
+}

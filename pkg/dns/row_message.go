@@ -104,18 +104,18 @@ func (rm RawMessage) Parse() (Message, error) {
 			continue
 		}
 		if labelOffset.compressionPointerOffset > 0 {
-			pointerOffset := labelOffset.compressionPointerOffset - 12
+			pointerOffset := labelOffset.compressionPointerOffset
 			endOfName, _ := findNullOffset(rm[pointerOffset:])
 
 			var name RowName
-			name = append(name, rm[offset:labelOffset.value]...)
+			name = append(name, rm[offset:labelOffset.value-1]...)
 			name = append(name, rm[pointerOffset:pointerOffset+endOfName+1]...)
 
-			endOfQuestion := labelOffset.value + 4
+			endOfQuestion := labelOffset.value + 5
 
 			var rq RowQuestion
 			rq = append(rq, name...)
-			rq = append(rq, rm[labelOffset.value:endOfQuestion]...)
+			rq = append(rq, rm[labelOffset.value+1:endOfQuestion]...)
 			questions = append(questions, rq.parse())
 
 			offset = endOfQuestion
@@ -181,7 +181,7 @@ func findNameEndOrPointerOffset(context int, slice []byte) (LabelOffset, error) 
 			if offset+1 >= len(slice) {
 				return LabelOffset{}, fmt.Errorf("invalid pointer in label")
 			}
-			return LabelOffset{value: context + offset, compressionPointerOffset: int(b&0x3F)<<8 + int(slice[offset+1])}, nil
+			return LabelOffset{value: context + offset + 1, compressionPointerOffset: int(b&0x3F)<<8 + int(slice[offset+1])}, nil
 		} else {
 			offset++
 		}
