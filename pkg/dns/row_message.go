@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+var headerLength = 12
+
 type RowHeaderFlags []byte
 
 type RowHeader []byte
@@ -78,23 +80,24 @@ func (q RowQuestion) parse() Question {
 	}
 }
 
-func (p RawMessage) Parse() (Message, error) {
-	header := RowHeader(p[0:12]).parse()
+func (rm RawMessage) Parse() (Message, error) {
+	header := RowHeader(rm[0:headerLength]).parse()
 
+	offset := headerLength
+
+	// Parse questions
 	var questions Questions
-	offset := 12
-
 	for i := 0; i < int(header.QDCOUNT); i++ {
-		labelOffset, err := findLabelPointerOffset(offset, p[offset:])
+		labelOffset, err := findNameEndOrPointerOffset(offset, rm[offset:])
 		if labelOffset.labelEndOffset > 0 {
 			endOfName := labelOffset.labelEndOffset
 			endOfQuestion := offset + endOfName + 5
 
-			if endOfQuestion > len(p) {
+			if endOfQuestion > len(rm) {
 				return Message{}, fmt.Errorf("invalid question length")
 			}
 
-			questions = append(questions, RowQuestion(p[offset:endOfQuestion]).parse())
+			questions = append(questions, RowQuestion(rm[offset:endOfQuestion]).parse())
 
 			offset = endOfQuestion
 
@@ -102,17 +105,17 @@ func (p RawMessage) Parse() (Message, error) {
 		}
 		if labelOffset.compressionPointerOffset > 0 {
 			pointerOffset := labelOffset.compressionPointerOffset - 12
-			endOfName, _ := findNullOffset(p[pointerOffset:])
+			endOfName, _ := findNullOffset(rm[pointerOffset:])
 
 			var name RowName
-			name = append(name, p[offset:labelOffset.value-1]...)
-			name = append(name, p[pointerOffset:pointerOffset+endOfName+1]...)
+			name = append(name, rm[offset:labelOffset.value]...)
+			name = append(name, rm[pointerOffset:pointerOffset+endOfName+1]...)
 
-			endOfQuestion := labelOffset.value + 5
+			endOfQuestion := labelOffset.value + 4
 
 			var rq RowQuestion
 			rq = append(rq, name...)
-			rq = append(rq, p[labelOffset.value+1:endOfQuestion]...)
+			rq = append(rq, rm[labelOffset.value:endOfQuestion]...)
 			questions = append(questions, rq.parse())
 
 			offset = endOfQuestion
@@ -122,8 +125,76 @@ func (p RawMessage) Parse() (Message, error) {
 		return Message{}, err
 	}
 
+	// Parse answers
+	var answers Answers
+	for i := 0; i < int(header.ANCOUNT); i++ {
+		nameEndOrPointerOffset, err := findNameEndOrPointerOffset(offset, rm[offset:])
+		if nameEndOrPointerOffset.compressionPointerOffset > 0 {
+			panic("not implemented")
+		}
+		if err != nil {
+			return Message{}, err
+		}
+		nameEndOffset := nameEndOrPointerOffset.value
+		name := RowName(rm[offset:nameEndOffset]).parse()
+
+		typeClassOffset := nameEndOffset + 1
+		qType := binary.BigEndian.Uint16(rm[typeClassOffset : typeClassOffset+2])
+		qClass := binary.BigEndian.Uint16(rm[typeClassOffset+2 : typeClassOffset+4])
+
+		ttlOffset := typeClassOffset + 4
+		ttl := binary.BigEndian.Uint32(rm[ttlOffset : ttlOffset+4])
+
+		rdLengthOffset := ttlOffset + 4
+		rdLength := binary.BigEndian.Uint16(rm[rdLengthOffset : rdLengthOffset+2])
+
+		rdata := rm[rdLengthOffset+2 : rdLengthOffset+2+int(rdLength)]
+
+		answer := Answer{
+			NAME:    name,
+			TYPE:    qType,
+			CLASS:   qClass,
+			TTL:     ttl,
+			RDLENGH: rdLength,
+			RDATA:   rdata,
+		}
+
+		answers = append(answers, answer)
+		offset += len(answer.serialize())
+	}
+
 	return Message{
 		Header:    header,
 		Questions: questions,
+		Answers:   answers,
 	}, nil
+}
+
+func findNameEndOrPointerOffset(context int, slice []byte) (LabelOffset, error) {
+	offset := 0
+	for offset < len(slice) {
+		b := slice[offset]
+		if b == 0 {
+			return LabelOffset{value: context + offset, labelEndOffset: offset}, nil
+		}
+		if b&0xC0 == 0xC0 {
+			if offset+1 >= len(slice) {
+				return LabelOffset{}, fmt.Errorf("invalid pointer in label")
+			}
+			return LabelOffset{value: context + offset, compressionPointerOffset: int(b&0x3F)<<8 + int(slice[offset+1])}, nil
+		} else {
+			offset++
+		}
+	}
+	return LabelOffset{}, fmt.Errorf("null terminator not found")
+}
+
+func findNullOffset(slice []byte) (int, error) {
+	for i, b := range slice {
+		if b == 0 {
+			return i, nil
+		}
+	}
+
+	return 0, fmt.Errorf("null terminator not found")
 }
