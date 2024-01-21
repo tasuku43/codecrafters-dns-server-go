@@ -51,33 +51,20 @@ func main() {
 			fmt.Println("Error parsing message:", err)
 			break
 		}
-		fmt.Println("[", m.Header.ID, "]DNS Message: ", buf[:size])
-		ms := m.Split()
 		fmt.Printf("Start processing. ID %d\n", m.Header.ID)
+		fmt.Println("[", m.Header.ID, "]DNS Message: ", buf[:size])
 
-		var resMessages dns.Messages
-		for _, m := range ms {
-			rm, err := forwarder.Forward(m.Serialize())
-			if err != nil {
-				fmt.Println("Error forwarding message:", err)
-				break
-			}
-			parsedResMessage, err := rm.Parse()
-			if err != nil {
-				fmt.Println("Error parsing message:", err)
-				break
-			}
-			fmt.Printf("[%d]parsedResMessageHeader: %+v\n", m.Header.ID, parsedResMessage.Header)
-			fmt.Printf("[%d]parsedResMessageQuestions: %+v\n", m.Header.ID, parsedResMessage.Questions)
-			fmt.Printf("[%d]parsedResMessageAnswers: %+v\n", m.Header.ID, parsedResMessage.Answers)
-			resMessages = append(resMessages, parsedResMessage)
+		rm, err := forwarder.Forward(m)
+		if err != nil {
+			fmt.Println("Error forwarding message:", err)
+			break
 		}
-		fmt.Printf("[%d]ResMessages: %+v\n", m.Header.ID, resMessages)
 
-		mergedMessage := resMessages.Merge()
-		fmt.Printf("[%d]ResMergedMessages: %+v\n", m.Header.ID, mergedMessage)
+		fmt.Printf("[ %d ]Response Message Header: %+v\n", m.Header.ID, rm.Header)
+		fmt.Printf("[ %d ]Response Message Questions: %+v\n", m.Header.ID, rm.Questions)
+		fmt.Printf("[ %d ]Response Message Answers: %+v\n", m.Header.ID, rm.Answers)
 
-		_, err = udpConn.WriteToUDP(mergedMessage.Serialize(), source)
+		_, err = udpConn.WriteToUDP(rm.Serialize(), source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
